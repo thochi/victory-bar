@@ -260,9 +260,10 @@ export default class VictoryBar extends React.Component {
           yName: _.isString(data.y) ? data.y : undefined
         });
       });
+      const categoryData = dataArray.map((val) => val.category);
       return {
         attrs,
-        data: _.sortBy(dataArray, "x")
+        data: _.isEmpty(categoryData) ? _.sortBy(dataArray, "x") : dataArray
       }
     });
   }
@@ -289,7 +290,7 @@ export default class VictoryBar extends React.Component {
     // determine which range band this x value belongs to, and return the index of that range band.
     return categories.findIndex((category) => {
       return (x >= Math.min(...category) && x <= Math.max(...category));
-    })
+    });
   }
 
   getColor(props, index) {
@@ -391,22 +392,22 @@ export default class VictoryBar extends React.Component {
       // find the cumulative max for stacked chart types
       // this is only sensible for the y domain
       // TODO check assumption
-      const cumulativeMax = (props.stacked && axis === "y" && this.datasets.length > 1) ?
-        _.reduce(this.datasets, (memo, dataset) => {
-          const yData = _.map(dataset.data, "y");
-          const localMax = (Math.max(...yData));
-          return localMax > 0 ? memo + localMax : memo;
-        }, 0) : -Infinity;
-      const cumulativeMin = (props.stacked && axis === "y" && this.datasets.length > 1) ?
-        _.reduce(this.datasets, (memo, dataset) => {
-          const yData = _.map(dataset.data, "y");
-          const localMin = (Math.min(...yData));
-          return localMin < 0 ? memo + localMin : memo;
-        }, 0) : Infinity;
-
+      const dataByIndex = (dataset, i, axis) => dataset[i][axis];
+      const dataByCategory = (dataset, i, axis) => {
+        const categoryData = dataset.filter((element) => element.category === i);
+        return categoryData.reduce((memo, val, index) => {
+          return memo + val[axis];
+        }, 0);
+      };
+      const cumulativeData = (props.stacked && axis === "y" && this.datasets[0].data.length > 1) ?
+        this.datasets[0].data.map((data, index, datasets) => {
+          const addVal = data.category ? dataByCategory(datasets, index, "y") :
+            dataByIndex(datasets, index, "y");
+          return datasets.reduce((memo) => {return memo + addVal}, 0);
+        }) : [];
       // use greatest min / max
-      const domainMin = Math.min(...[min, cumulativeMin]);
-      const domainMax = Math.max(...[max, cumulativeMax]);
+      const domainMin = Math.min(min, Math.min(...cumulativeData));
+      const domainMax = Math.max(max, Math.max(...cumulativeData));
       // add 1% padding so bars are always visible
       const padding = 0.01 * Math.abs(domainMax - domainMin);
       return [domainMin - padding, domainMax - padding];
