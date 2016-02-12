@@ -77,7 +77,7 @@ module.exports = {
     const plotAllLabels = props.labels && Array.isArray(props.labels[0]) ||
         props.labelComponents && Array.isArray(props.labelComponents[0]);
     if (plotAllLabels) {
-      return true
+      return true;
     } else {
       const isCenter = Math.floor(datasets.length / 2) === index;
       const isLast = datasets.length === index + 1;
